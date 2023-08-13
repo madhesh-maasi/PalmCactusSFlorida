@@ -1,0 +1,19 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "s-florida-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/sFlorida/SFloridaWebPart.js",
+          "manifest": "./src/webparts/sFlorida/SFloridaWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "SFloridaWebPartStrings": "lib/webparts/sFlorida/loc/{locale}.js",
+    "ControlStrings": "node_modules/@pnp/spfx-controls-react/lib/loc/{locale}.js"
+  }
+}
