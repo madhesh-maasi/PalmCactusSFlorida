@@ -18,9 +18,11 @@ import {
 } from "@pnp/spfx-controls-react/lib/PeoplePicker";
 import classes from "./SFlorida.module.scss";
 import "./style.css";
-import { IconNames } from "office-ui-fabric-react";
+import Pagination from "office-ui-fabric-react-pagination";
 let DataArray: any[] = [];
-
+let isActive = false;
+let listName = "S Florida Properties";
+// let listName = "S Florida Dev";
 interface Data {
   selected?: boolean;
   Title: string;
@@ -47,11 +49,21 @@ interface Data {
 }
 let attachFiles: any[] = [];
 let files: any[] = [];
+let totalPage: number = 30;
+let currentPage = 1;
+let arrMasterdata: any[] = [];
 
 const MainComponent = (props) => {
   const [masterData, setmasterdata] = useState<Data[]>([]);
   const [duplicate, setDuplicate] = useState<Data[]>([]);
-  const [error, setError] = useState({ Title: "", Price: "", ARV: "" });
+  const [loader, setLoader] = useState(false);
+  const [error, setError] = useState({
+    Title: "",
+    Price: "",
+    ARV: "",
+    Offer: "",
+    Sold4: "",
+  });
   const [select, setSelect] = useState(false);
   const [attachment, setAttachment] = useState([]);
   const [selectedSortingOption, setSelectedSortingOption] =
@@ -62,6 +74,8 @@ const MainComponent = (props) => {
   const [isEdit, setIsEdit] = useState(false);
   const [Id, setId] = useState(null);
   const [isdelete, setIsdelete] = useState(false);
+  // const [crntPage, setCrntPage] = useState(1);
+  const [rows, setrows] = useState(masterData);
 
   const [value, setvalue] = useState<Data>({
     Title: "",
@@ -108,6 +122,7 @@ const MainComponent = (props) => {
     ID: null,
     assignId: null,
   });
+  const [reRender, SetReRender] = useState(true);
   const searchstyle = {
     root: {
       width: 200,
@@ -115,14 +130,18 @@ const MainComponent = (props) => {
   };
   const buttonstyle = {
     root: {
-      background: "#ccc",
-      color: "#ffffff",
-      border: "1px solid #ccc",
+      background: "#7a7574",
+      color: "#fff",
+      border: "1px solid #7a7574",
+    },
+    rootHovered: {
+      backgroundColor: "#7a7574",
+      color: "#fff",
     },
   };
   const columns = [
     {
-      key: "column1",
+      key: "Title",
       name: "MLS No./Off Market",
       fieldName: "Title",
       minWidth: 100,
@@ -130,7 +149,7 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column2",
+      key: "Originally Inputted",
       name: "Originally Inputted",
       fieldName: "Created",
       minWidth: 100,
@@ -138,7 +157,7 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column3",
+      key: "Property Address",
       name: "Property Address",
       fieldName: "PropertyAddress",
       minWidth: 100,
@@ -146,7 +165,7 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column4",
+      key: "Source",
       name: "Source",
       fieldName: "Whereat",
       minWidth: 100,
@@ -154,7 +173,7 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column5",
+      key: "Assigned To",
       name: "Assigned To",
       fieldName: "AssignedTo",
       minWidth: 120,
@@ -162,7 +181,7 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column6",
+      key: "Status",
       name: "Status",
       fieldName: "Status",
       minWidth: 100,
@@ -170,7 +189,7 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column7",
+      key: "Price",
       name: "Price",
       fieldName: "Price",
       minWidth: 100,
@@ -178,7 +197,7 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column8",
+      key: "ARV",
       name: "ARV",
       fieldName: "ARV",
       minWidth: 100,
@@ -186,7 +205,7 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column9",
+      key: "Offer",
       name: "Offer ",
       fieldName: "Offer",
       minWidth: 100,
@@ -194,7 +213,7 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column10",
+      key: "Agent Name ",
       name: "Agent Name ",
       fieldName: "AgentName",
       minWidth: 100,
@@ -202,31 +221,7 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column11",
-      name: "OffMarket ",
-      fieldName: "OffMarket",
-      minWidth: 100,
-      maxWidth: 200,
-      isResizable: true,
-    },
-    {
-      key: "column12",
-      name: "Sold 4 ",
-      fieldName: "Sold4",
-      minWidth: 100,
-      maxWidth: 200,
-      isResizable: true,
-    },
-    {
-      key: "column13",
-      name: "Received Under Contract form",
-      fieldName: "OfferContract",
-      minWidth: 100,
-      maxWidth: 200,
-      isResizable: true,
-    },
-    {
-      key: "column14",
+      key: "Agent Number",
       name: "Agent Number",
       fieldName: "AgentNumber",
       minWidth: 100,
@@ -234,7 +229,32 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column15",
+      key: "OffMarket",
+      name: "OffMarket ",
+      fieldName: "OffMarket",
+      minWidth: 100,
+      maxWidth: 200,
+      isResizable: true,
+    },
+    {
+      key: "Sold 4 ",
+      name: "Sold 4 ",
+      fieldName: "Sold4",
+      minWidth: 100,
+      maxWidth: 200,
+      isResizable: true,
+    },
+    {
+      key: "Received Under Contract form",
+      name: "Received Under Contract form",
+      fieldName: "OfferContract",
+      minWidth: 100,
+      maxWidth: 200,
+      isResizable: true,
+    },
+
+    {
+      key: "Email",
       name: "Email",
       fieldName: "Email",
       minWidth: 100,
@@ -242,7 +262,7 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "column16",
+      key: "Notes",
       name: "Notes",
       fieldName: "Notes",
       minWidth: 100,
@@ -257,7 +277,6 @@ const MainComponent = (props) => {
       maxWidth: 200,
       isResizable: true,
       onRender: (item: any) => {
-        console.log(item);
         return (
           <ul style={{ listStyleType: "none", padding: 0, margin: 0 }}>
             {item.attachments.map((att, index) => (
@@ -337,7 +356,6 @@ const MainComponent = (props) => {
   //sortFunction
 
   const sortFunction = (value) => {
-    console.log(value);
     const sortedData = duplicate.slice().sort((a: any, b: any) => {
       const dateA = new Date(a.Created).getTime();
       const dateB = new Date(b.Created).getTime();
@@ -349,9 +367,7 @@ const MainComponent = (props) => {
         }
       }
     });
-    console.log(sortedData);
     setmasterdata([...sortedData]);
-    console.log("Data type of Created property:", typeof masterData[0].Created);
   };
 
   //search
@@ -404,6 +420,16 @@ const MainComponent = (props) => {
     },
   });
 
+  function paginate(pagenumber) {
+    let allItems = masterData;
+    var lastIndex = pagenumber * totalPage;
+    var firstIndex = lastIndex - totalPage;
+    var paginatedItems = allItems.slice(firstIndex, lastIndex);
+    // setCrntPage(pagenumber);
+    currentPage = pagenumber;
+    setrows(paginatedItems);
+  }
+
   // const deselectSelectedItem = () => {
   //   selection.setAllSelected(false);
   //   console.log(value);
@@ -422,29 +448,84 @@ const MainComponent = (props) => {
   //   }
   //   setvalue({ ...FormData });
   // };
+  // const getonChange = (key, _value) => {
+  //   let FormData = { ...value };
+  //   let newErrors = { ...error };
+  //   FormData[key] = _value;
+  //   if (
+  //     key === "Price" ||
+  //     key === "ARV" ||
+  //     key === "Sold4" ||
+  //     key === "Offer"
+  //   ) {
+  //     if (!/^\d*$/.test(_value)) {
+  //       newErrors[key] = "Please enter a Number";
+  //       // return;
+  //     } else {
+  //       newErrors[key] = null;
+  //     }
+  //   }
+  //   // if(key === "Title" && _value == ""){
+  //   //   newErrors[key] = "";
+  //   // }else {
+  //   //   newErrors[key] = null;
+  //   // }
+  //   if (key === "Title" && _value.trim() !== "") {
+  //     const titleExists = masterData.some((item) => {
+  //       // Check if the title exists in other items but not in the current item being edited
+  //       return (
+  //         item.Title.toLowerCase().trim() === _value.toLowerCase().trim() &&
+  //         item.ID !== FormData.ID
+  //       );
+  //     });
+  //     console.log(titleExists);
+
+  //     if (titleExists) {
+  //       newErrors[key] = "This value already exists";
+  //     } else {
+  //       newErrors[key] = null;
+  //     }
+  //   }
+
+  //   setError({ ...newErrors });
+  //   console.log(FormData);
+  //   setvalue({ ...FormData });
+  // };
   const getonChange = (key, _value) => {
     let FormData = { ...value };
     let newErrors = { ...error };
     FormData[key] = _value;
-    if (key === "Price" || key === "ARV") {
+
+    if (
+      key === "Price" ||
+      key === "ARV" ||
+      key === "Sold4" ||
+      key === "Offer"
+    ) {
       if (!/^\d*$/.test(_value)) {
         newErrors[key] = "Please enter a Number";
-        // return;
       } else {
         newErrors[key] = null;
       }
     }
 
-    if (key === "Title" && _value.trim() !== "") {
-      const titleExists = masterData.some((item) => {
-        // Check if the title exists in other items but not in the current item being edited
-        return item.Title === _value && item.ID !== FormData.ID;
-      });
-
-      if (titleExists) {
-        newErrors[key] = "This value already exists";
+    if (key === "Title") {
+      const trimmedValue = _value.trim();
+      if (trimmedValue === "") {
+        newErrors[key] = "Title is required";
       } else {
-        newErrors[key] = null;
+        const titleExists = masterData.some((item) => {
+          return (
+            item.Title.toLowerCase().trim() === trimmedValue.toLowerCase() &&
+            item.ID !== FormData.ID
+          );
+        });
+
+        if (titleExists) {
+          newErrors[key] = "This value already exists";
+        } else {
+          newErrors[key] = null;
+        }
       }
     }
 
@@ -454,7 +535,6 @@ const MainComponent = (props) => {
 
   const getFile = (e) => {
     files = e.target.files;
-    console.log(files);
 
     attachFiles = [...attachment];
     for (let i = 0; i < files.length; i++) {
@@ -469,14 +549,11 @@ const MainComponent = (props) => {
     }
     setAttachment([...attachFiles]);
     // console.log(attachment, "attach");
-
-    console.log(attachFiles, "attachFiles");
   };
 
   const updatevalue = () => {
-    console.log(value.AssignedTo);
     sp.web.lists
-      .getByTitle("S Florida Dev")
+      .getByTitle(listName)
       .items.getById(Id)
       .update({
         Title: value.Title.trim(),
@@ -496,8 +573,6 @@ const MainComponent = (props) => {
         Status: value.Status,
       })
       .then(async (res) => {
-        console.log(res);
-
         let todelete = attachment.filter((val) => {
           return val.isNew == false && val.isDelete == true;
         });
@@ -505,25 +580,27 @@ const MainComponent = (props) => {
           return val.isNew == true && val.isDelete == false;
         });
 
+        debugger;
+
         if (todelete.length > 0) {
-          let count = 0;
-          todelete.forEach(async (val, i) => {
+          await todelete.forEach(async (val, i) => {
             await sp.web.lists
-              .getByTitle("S Florida Dev")
+              .getByTitle(listName)
               .items.getById(Id)
               .attachmentFiles.getByName(val.fileName)
               .delete()
-              .then(async function (res) {
-                count = count + 1;
-                if (count >= todelete.length) {
-                  addDataAfterEdit(toadd, Id);
-                }
+              .then(async (res) => {
+                console.log(res);
               })
-              .catch(function (error) {});
+              .catch((error) => {
+                console.log(error);
+                console.log(`File not deleted : ${val.fileName}`);
+              });
           });
-        } else {
-          addDataAfterEdit(toadd, Id);
         }
+        await addDataAfterEdit(toadd, Id);
+        setIsPane(false);
+        // SetReRender(true);
       })
       .catch((err) => {
         console.log(err);
@@ -542,14 +619,15 @@ const MainComponent = (props) => {
       let countNew = 0;
       for (let i = 0; i < newData.length; i++) {
         await sp.web.lists
-          .getByTitle("S Florida Dev")
+          .getByTitle(listName)
           .items.getById(Id)
           .attachmentFiles.add(newData[i].name, newData[i].content)
           .then(async (res) => {
             countNew = countNew + 1;
             if (countNew >= newData.length) {
-              await getData();
-              alert("Updated");
+              await getData(),
+                // SetReRender(true);
+                setIsPane(false);
             }
           })
           .catch((err) => {
@@ -558,30 +636,35 @@ const MainComponent = (props) => {
       }
     } else {
       await getData();
-      alert("Updated");
+      // alert("Updated");
     }
+    // alert("Updated");
   }
 
   const deleteData = () => {
-    debugger;
     sp.web.lists
-      .getByTitle("S Florida Dev")
+      .getByTitle(listName)
       .items.getById(Id)
       .delete()
       .then((res) => {
-        console.log(res);
         setIsdelete(false);
+        // SetReRender(true);
         getData();
 
-        alert("deleted successfully");
+        // alert("deleted successfully");
       })
       .catch((err) => {
-        alert(err);
+        // alert(err);
       });
   };
   const onSave = async () => {
+    if (value.Title == "") {
+      setError({ ...error, Title: "Title is required" });
+      setIsPane(true);
+      return;
+    }
     await sp.web.lists
-      .getByTitle("S Florida Dev")
+      .getByTitle(listName)
       .items.add({
         Title: value.Title ? value.Title : "",
         AssignedToId: value.assignId !== undefined ? value.assignId : null,
@@ -611,32 +694,51 @@ const MainComponent = (props) => {
         // Modified: value.Modified,
         // PeopleEmail: value.PeopleEmail,
       })
-      .then((res) => {
-        console.log(res.data.Id);
+      .then(async (res) => {
         let x = attachment.filter((a) => {
           return a.isDelete != true;
         });
-        console.log(attachFiles);
+        let countNew = 0;
+        for (let i = 0; i < x.length; i++) {
+          await sp.web.lists
+            .getByTitle(listName)
+            .items.getById(res.data.Id)
+            .attachmentFiles.add(x[i].fileName, x[i].content)
+            .then(async (res) => {
+              countNew = countNew + 1;
+              if (countNew >= x.length) {
+                await getData();
 
-        sp.web.lists
-          .getByTitle("S Florida Dev")
-          .items.getById(res.data.Id)
-          .attachmentFiles.addMultiple(
-            x.map((val) => {
-              return {
-                name: val.fileName,
-                content: val.content,
-              };
+                // SetReRender(true);
+              }
+              setIsPane(false);
             })
-          )
-          .then((res) => {
-            console.log("success");
-            console.log(res, "res");
-            setAttachment([]);
-          })
-          .catch((err) => {
-            console.log(err);
-          });
+            .catch((err) => {
+              console.log(err);
+            });
+        }
+
+        // sp.web.lists
+        //   .getByTitle(listName)
+        //   .items.getById(res.data.Id)
+        //   .attachmentFiles.addMultiple(
+        //     x.map((val) => {
+        //       return {
+        //         name: val.fileName,
+        //         content: val.content,
+        //       };
+        //     })
+        //   )
+        //   .then((res) => {
+        //     console.log("success");
+        //     console.log(res, "res");
+        //     setAttachment([]);
+        //     alert("Created")
+        //     // getData()
+        //   })
+        //   .catch((err) => {
+        //     console.log(err);
+        //   });
 
         value.ARV = "";
         value.AgentName = "";
@@ -653,7 +755,9 @@ const MainComponent = (props) => {
         value.Whereat = "";
         value.Status = "";
         setvalue({ ...value });
+        setIsPane(false);
         getData();
+        // SetReRender(true);
       })
       .catch((err) => {
         console.log(err);
@@ -662,74 +766,114 @@ const MainComponent = (props) => {
 
   const getData = async () => {
     await sp.web.lists
-      .getByTitle("S Florida Dev")
-      .items.select("*, AssignedTo/EMail")
-      .expand("AssignedTo")
+      .getByTitle(listName)
+      .items.select("*, AssignedTo/EMail,AttachmentFiles")
+      .expand("AssignedTo", "AttachmentFiles")
       .top(5000)
       .orderBy("Created", false)
       .get()
       .then(async (res: any) => {
-        console.log("res > ", res);
+        console.log(res);
+
         DataArray = [];
-
-        for (let i: number = 0; res.length > i; i++) {
-          await sp.web.lists
-            .getByTitle("S Florida Dev")
-            .items.getById(res[i].ID)
-            .attachmentFiles()
-            .then((resFile) => {
-              let arrGetAttach = [];
-              resFile.forEach((val) => {
-                arrGetAttach.push({
-                  fileName: val.FileName,
-                  content: null,
-                  isNew: false,
-                  isDelete: false,
-                  serverRelativeUrl: val.ServerRelativeUrl,
-                  itemId: value.ID,
-                });
-              });
-
-              DataArray.push({
-                Title: res[i].Title ? res[i].Title : "",
-                // Created: res[i].Created,
-                PropertyAddress: res[i].PropertyAddress
-                  ? res[i].PropertyAddress
-                  : "",
-                Whereat: res[i].Whereat,
-                AssignedTo: res[i].AssignedTo ? res[i].AssignedTo.EMail : "",
-                Created: res[i].Created,
-                Status: res[i].Status,
-                Price: res[i].Price,
-                ARV: res[i].ARV,
-                Offer: res[i].Offer,
-                AgentName: res[i].AgentName,
-                OffMarket: res[i].OffMarket,
-                Sold4: res[i].Sold4,
-                OfferContract: res[i].OfferContract,
-                AgentNumber: res[i].AgentNumber,
-                Email: res[i].Email,
-                Notes: res[i].Notes,
-                Modified: res[i].Modified,
-                ID: res[i].ID,
-                PeopleEmail: res[i].AssignedTo ? res[i].AssignedTo.EMail : "",
-                assignId: res[i].AssignedToId ? res[i].AssignedToId : null,
-                attachments: arrGetAttach,
-              });
-
-              console.log(res, "ees");
-              // setAttachment([...getattach]);
-            })
-            .catch((err) => {
-              console.log(err);
+        res.forEach((li) => {
+          let arrGetAttach = [];
+          li.AttachmentFiles.forEach((val) => {
+            arrGetAttach.push({
+              fileName: val.FileName,
+              content: null,
+              isNew: false,
+              isDelete: false,
+              serverRelativeUrl: val.ServerRelativeUrl,
+              itemId: value.ID,
             });
-        }
+          });
+          DataArray.push({
+            Title: li.Title ? li.Title : "",
+            // Created: res[i].Created,
+            PropertyAddress: li.PropertyAddress ? li.PropertyAddress : "",
+            Whereat: li.Whereat,
+            AssignedTo: li.AssignedTo ? li.AssignedTo.EMail : "",
+            Created: li.Created,
+            Status: li.Status,
+            Price: li.Price,
+            ARV: li.ARV,
+            Offer: li.Offer,
+            AgentName: li.AgentName,
+            OffMarket: li.OffMarket,
+            Sold4: li.Sold4,
+            OfferContract: li.OfferContract,
+            AgentNumber: li.AgentNumber,
+            Email: li.Email,
+            Notes: li.Notes,
+            Modified: li.Modified,
+            ID: li.ID,
+            PeopleEmail: li.AssignedTo ? li.AssignedTo.EMail : "",
+            assignId: li.AssignedToId ? li.AssignedToId : null,
+            attachments: arrGetAttach,
+          });
+        });
+
+        // for (let i: number = 0; res.length > i; i++) {
+        //   await sp.web.lists
+        //     .getByTitle(listName)
+        //     .items.getById(res[i].ID)
+        //     .attachmentFiles()
+        //     .then((resFile) => {
+        //       let arrGetAttach = [];
+        //       resFile.forEach((val) => {
+        //         arrGetAttach.push({
+        //           fileName: val.FileName,
+        //           content: null,
+        //           isNew: false,
+        //           isDelete: false,
+        //           serverRelativeUrl: val.ServerRelativeUrl,
+        //           itemId: value.ID,
+        //         });
+        //       });
+
+        //       DataArray.push({
+        //         Title: res[i].Title ? res[i].Title : "",
+        //         // Created: res[i].Created,
+        //         PropertyAddress: res[i].PropertyAddress
+        //           ? res[i].PropertyAddress
+        //           : "",
+        //         Whereat: res[i].Whereat,
+        //         AssignedTo: res[i].AssignedTo ? res[i].AssignedTo.EMail : "",
+        //         Created: res[i].Created,
+        //         Status: res[i].Status,
+        //         Price: res[i].Price,
+        //         ARV: res[i].ARV,
+        //         Offer: res[i].Offer,
+        //         AgentName: res[i].AgentName,
+        //         OffMarket: res[i].OffMarket,
+        //         Sold4: res[i].Sold4,
+        //         OfferContract: res[i].OfferContract,
+        //         AgentNumber: res[i].AgentNumber,
+        //         Email: res[i].Email,
+        //         Notes: res[i].Notes,
+        //         Modified: res[i].Modified,
+        //         ID: res[i].ID,
+        //         PeopleEmail: res[i].AssignedTo ? res[i].AssignedTo.EMail : "",
+        //         assignId: res[i].AssignedToId ? res[i].AssignedToId : null,
+        //         attachments: arrGetAttach,
+        //       });
+
+        //       // setAttachment([...getattach]);
+        //     })
+        //     .catch((err) => {
+        //       console.log(err);
+        //     });
+        // }
 
         setmasterdata([...DataArray]);
         setDuplicate([...DataArray]);
-
+        paginate(1);
+        setLoader(false);
+        isActive = true;
+        // SetReRender(false);
         // const item: any = sp.web.lists
-        // .getByTitle("S Florida Dev")
+        // .getByTitle(listName)
         // .items.getById(.ID);
       })
       .catch((err) => {
@@ -737,33 +881,45 @@ const MainComponent = (props) => {
       });
   };
   const GetAddachment = () => {
-    sp.web.lists
-      .getByTitle("S Florida Dev")
-      .items.getById(editdata.ID)
-      .attachmentFiles()
-      .then((res) => {
-        let getattach = [];
-        res.forEach((val) => {
-          getattach.push({
-            fileName: val.FileName,
-            content: null,
-            isNew: false,
-            isDelete: false,
-            serverRelativeUrl: val.ServerRelativeUrl,
-            itemId: value.ID,
-          });
-        });
-
-        console.log(res, "ees");
-        setAttachment([...getattach]);
-      })
-      .catch((err) => {
-        console.log(err);
+    let getattach = [];
+    let objSectedData = masterData.filter((li) => li.ID == editdata.ID)[0];
+    objSectedData.attachments.forEach((val) => {
+      getattach.push({
+        fileName: val.fileName,
+        content: null,
+        isNew: false,
+        isDelete: false,
+        serverRelativeUrl: val.ServerRelativeUrl,
+        itemId: value.ID,
       });
+    });
+    setAttachment([...getattach]);
+    // sp.web.lists
+    //   .getByTitle(listName)
+    //   .items.getById(editdata.ID)
+    //   .attachmentFiles()
+    //   .then((res) => {
+    //     let getattach = [];
+    //     res.forEach((val) => {
+    //       getattach.push({
+    //         fileName: val.FileName,
+    //         content: null,
+    //         isNew: false,
+    //         isDelete: false,
+    //         serverRelativeUrl: val.ServerRelativeUrl,
+    //         itemId: value.ID,
+    //       });
+    //     });
+
+    //     setAttachment([...getattach]);
+    //   })
+    //   .catch((err) => {
+    //     console.log(err);
+    //   });
   };
   // const addachDelete = (id, fileName) => {
   //   sp.web.lists
-  //     .getByTitle("S Florida Dev")
+  //     .getByTitle(listName)
   //     .items.getById(id)
   //     .attachmentFiles.getByName(fileName)
   //     .delete();
@@ -775,10 +931,10 @@ const MainComponent = (props) => {
     } else {
       temp[index].isDelete = true;
     }
-
     setAttachment([...temp]);
   };
   useEffect(() => {
+    setLoader(true);
     getData();
   }, []);
 
@@ -799,7 +955,7 @@ const MainComponent = (props) => {
           }}
         >
           <Label>S Florida Properties</Label>
-          <Icon iconName="FavoriteStar" />
+          {/* <Icon iconName="FavoriteStar" /> */}
         </div>
         <div
           style={{
@@ -808,24 +964,28 @@ const MainComponent = (props) => {
             gap: "10px",
           }}
         >
-          <Dropdown
-            styles={{
-              root: {
-                width: 200,
-              },
-            }}
-            defaultSelectedKey={selectedSortingOption}
-            options={[
-              { key: "newerToOlder", text: "Newer to Older" },
-              { key: "olderToNewer", text: "Older to Newer" },
-            ]}
-            onChange={(e, val) => {
-              setSelectedSortingOption(val.key as string);
-              sortFunction(val.key);
-            }}
-          />
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Label>Orginally inputted :</Label>
+            <Dropdown
+              styles={{
+                root: {
+                  width: 200,
+                },
+              }}
+              defaultSelectedKey={selectedSortingOption}
+              options={[
+                { key: "newerToOlder", text: "Newer to Older" },
+                { key: "olderToNewer", text: "Older to Newer" },
+              ]}
+              onChange={(e, val) => {
+                setSelectedSortingOption(val.key as string);
+                sortFunction(val.key);
+              }}
+            />
+          </div>
 
           <SearchBox
+            placeholder="Search Property Address"
             styles={searchstyle}
             onChange={(_, newValue) => {
               handleSearch(newValue);
@@ -835,6 +995,7 @@ const MainComponent = (props) => {
           />
           <DefaultButton
             text="New"
+            // disabled={!isActive}
             iconProps={{ iconName: "Add" }}
             styles={buttonstyle}
             onClick={() => {
@@ -873,7 +1034,13 @@ const MainComponent = (props) => {
               <DefaultButton
                 text="Edit"
                 iconProps={{ iconName: "Edit" }}
-                styles={buttonstyle}
+                // styles={buttonstyle}
+
+                styles={{
+                  root: {
+                    border: "none", // Remove the border
+                  },
+                }}
                 onClick={(e: any) => {
                   setIsEdit(true);
 
@@ -887,7 +1054,15 @@ const MainComponent = (props) => {
                 // text="Delete"
                 title="Delete"
                 iconProps={{ iconName: "Delete" }}
-                styles={buttonstyle}
+                // styles={buttonstyle}
+                styles={{
+                  root: {
+                    color: "#FF6347",
+                  },
+                  rootHovered: {
+                    color: "#FF6347",
+                  },
+                }}
                 onClick={(e: any) => {
                   // deleteData();
                   setIsdelete(true);
@@ -898,17 +1073,63 @@ const MainComponent = (props) => {
           )}
         </div>
       </div>
-      <DetailsList
-        items={masterData}
-        columns={columns}
-        selection={selection}
-        selectionMode={SelectionMode.single}
-        onShouldVirtualize={() => {
-          return false;
-        }}
-        // setKey="set"
-        // onItemInvoked={() => deselectSelectedItem()}
-      />
+      <div>
+        {loader ? (
+          <ShimmeredDetailsList
+            setKey="items"
+            items={[]}
+            columns={columns}
+            enableShimmer={true}
+            // shimmerLines={10}
+          />
+        ) : masterData.length === 0 ? (
+          <Label
+            style={{
+              fontSize: "16px",
+              fontWeight: "bold",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            No Data Found
+          </Label>
+        ) : (
+          <DetailsList
+            items={rows}
+            columns={columns}
+            selection={selection}
+            selectionMode={SelectionMode.single}
+            onShouldVirtualize={() => {
+              return false;
+            }}
+          />
+        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={
+            masterData.length > 0 ? Math.ceil(masterData.length / 30) : 1
+          }
+          onChange={(page) => {
+            paginate(page);
+          }}
+        />
+        {/* {masterData.length > 0 ? (
+          <DetailsList
+            items={masterData}
+            columns={columns}
+            selection={selection}
+            selectionMode={SelectionMode.single}
+            onShouldVirtualize={() => {
+              return false;
+            }}
+            // setKey="set"
+            // onItemInvoked={() => deselectSelectedItem()}
+          />
+        ) : (
+          <></>
+        )} */}
+      </div>
       {/* 
       <ShimmeredDetailsList
         items={masterData} // Empty items array when loading
@@ -999,7 +1220,16 @@ const MainComponent = (props) => {
               <IconButton
                 iconProps={{ iconName: "cancel" }}
                 title="Close"
-                onClick={() => setIsPane(false)}
+                onClick={() => {
+                  setIsPane(false);
+                  setError({
+                    Title: "",
+                    Price: "",
+                    ARV: "",
+                    Offer: "",
+                    Sold4: "",
+                  });
+                }}
               />
             </div>
             {/* TextField */}
@@ -1084,7 +1314,7 @@ const MainComponent = (props) => {
               {/* <div className={classes.dollarInput}>
                 <span>$</span> */}
               <TextField
-                // prefix="$"
+                prefix="$"
                 styles={dollarInputStyle}
                 placeholder="Enter a number"
                 errorMessage={error.Price ? error.Price : null}
@@ -1129,11 +1359,48 @@ const MainComponent = (props) => {
               <TextField
                 styles={textStyle}
                 placeholder="Please enter Offer here"
+                errorMessage={error.Offer ? error.Offer : null}
                 value={value.Offer}
                 id="offer"
                 name="offer"
                 onChange={(e, val) => {
                   getonChange("Offer", val);
+                }}
+              />
+            </div>
+
+            <div style={{ margin: "10px 0px 15px 0px" }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Icon iconName="TextField" style={{ marginRight: "10px" }} />
+                <Label styles={labelstyle}>Agent Name</Label>
+              </div>
+
+              <TextField
+                styles={textStyle}
+                placeholder="Please enter Offer here"
+                value={value.AgentName}
+                // id="Sold 4"
+                // name="Sold 4"
+                onChange={(e, val) => {
+                  getonChange("AgentName", val);
+                }}
+              />
+            </div>
+
+            <div style={{ margin: "10px 0px 15px 0px" }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Icon iconName="TextField" style={{ marginRight: "10px" }} />
+                <Label styles={labelstyle}>Agent Number</Label>
+              </div>
+
+              <TextField
+                styles={textStyle}
+                placeholder="Please enter Offer here"
+                value={value.AgentNumber}
+                // id="Sold 4"
+                // name="Sold 4"
+                onChange={(e, val) => {
+                  getonChange("AgentNumber", val);
                 }}
               />
             </div>
@@ -1148,8 +1415,9 @@ const MainComponent = (props) => {
                 styles={textStyle}
                 placeholder="Please enter Offer here"
                 value={value.Sold4}
-                // id="Sold 4"
-                // name="Sold 4"
+                errorMessage={error.Sold4 ? error.Sold4 : null}
+                id="Sold 4"
+                name="Sold 4"
                 onChange={(e, val) => {
                   getonChange("Sold4", val);
                 }}
@@ -1217,42 +1485,6 @@ const MainComponent = (props) => {
                 ]}
                 onChange={(e, val) => {
                   getonChange("Whereat", val.key);
-                }}
-              />
-            </div>
-
-            <div style={{ margin: "10px 0px 15px 0px" }}>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <Icon iconName="TextField" style={{ marginRight: "10px" }} />
-                <Label styles={labelstyle}>Agent Name</Label>
-              </div>
-
-              <TextField
-                styles={textStyle}
-                placeholder="Please enter Offer here"
-                value={value.AgentName}
-                // id="Sold 4"
-                // name="Sold 4"
-                onChange={(e, val) => {
-                  getonChange("AgentName", val);
-                }}
-              />
-            </div>
-
-            <div style={{ margin: "10px 0px 15px 0px" }}>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <Icon iconName="TextField" style={{ marginRight: "10px" }} />
-                <Label styles={labelstyle}>Agent Number</Label>
-              </div>
-
-              <TextField
-                styles={textStyle}
-                placeholder="Please enter Offer here"
-                value={value.AgentNumber}
-                // id="Sold 4"
-                // name="Sold 4"
-                onChange={(e, val) => {
-                  getonChange("AgentNumber", val);
                 }}
               />
             </div>
@@ -1413,22 +1645,41 @@ const MainComponent = (props) => {
               <PrimaryButton
                 onClick={() => {
                   isEdit ? updatevalue() : onSave();
-                  setIsPane(false);
+
                   setIsEdit(false);
                 }}
                 disabled={
-                  error.Title || error.ARV || error.Price ? true : false
+                  error.Title ||
+                  error.ARV ||
+                  error.Price ||
+                  error.Sold4 ||
+                  error.Offer
+                    ? true
+                    : false
                 }
                 text={isEdit ? "Update" : "Save"}
                 styles={{
                   root: {
                     borderRadius: "4px",
+                    backgroundColor: "#7a7574",
+                    color: "#fff",
+                  },
+                  rootHovered: {
+                    backgroundColor: "#7a7574",
+                    color: "#fff",
                   },
                 }}
               />
               <DefaultButton
                 onClick={() => {
                   setIsPane(false);
+                  setError({
+                    Title: "",
+                    Price: "",
+                    ARV: "",
+                    Offer: "",
+                    Sold4: "",
+                  });
                 }}
                 text="cancel"
                 styles={{
@@ -1500,7 +1751,9 @@ const MainComponent = (props) => {
           />
           <DefaultButton
             text="Cancel"
-            onClick={() => setIsdelete(false)}
+            onClick={() => {
+              setIsdelete(false);
+            }}
             styles={{
               root: {
                 // backgroundColor: "red",

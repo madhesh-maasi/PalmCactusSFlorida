@@ -22,7 +22,8 @@
     "@fluentui/react": "^8.106.9",
     "spfx-fast-serve": "^3.0.6",
     "moment": "^2.29.4",
-    "@pnp/spfx-controls-react": "^3.8.0"
+    "@pnp/spfx-controls-react": "^3.8.0",
+    "office-ui-fabric-react-pagination": "0.0.8"
   },
   "devDependencies": {
     "@types/react": "16.9.51",
