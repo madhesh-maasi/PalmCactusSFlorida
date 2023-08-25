@@ -21,6 +21,7 @@ import "./style.css";
 import Pagination from "office-ui-fabric-react-pagination";
 import { Spinner, SpinnerSize } from "@fluentui/react/lib/Spinner";
 let DataArray: any[] = [];
+let arrSecondary: any[] = [];
 let isActive = false;
 let listName = "S Florida Properties";
 // let listName = "S Florida Dev";
@@ -35,12 +36,14 @@ interface Data {
   Price: string;
   ARV: string;
   Offer: string;
+  FinancingType: string;
   AgentName: string;
   OffMarket: boolean;
   Sold4: string;
   OfferContract: string;
   AgentNumber: string;
   Email: string;
+  Name?: string;
   Notes: string;
   Modified: any;
   PeopleEmail: string;
@@ -52,7 +55,11 @@ let attachFiles: any[] = [];
 let files: any[] = [];
 let totalPage: number = 30;
 let currentPage = 1;
-
+let objFilter = {
+  user: "",
+  property: "",
+  sort: "newerToOlder",
+};
 const MainComponent = (props) => {
   const [masterData, setmasterdata] = useState<Data[]>([]);
   const [duplicate, setDuplicate] = useState<Data[]>([]);
@@ -70,10 +77,16 @@ const MainComponent = (props) => {
     useState("newerToOlder");
 
   const [isPane, setIsPane] = useState<boolean>(false);
-  const [searchValue, setSearchValue] = useState("");
   const [isEdit, setIsEdit] = useState(false);
   const [Id, setId] = useState(null);
   const [isdelete, setIsdelete] = useState(false);
+  const [filterValue, setFilterValue] = useState(objFilter);
+  // const [search,setSearch] = useState({
+  //   name:"",
+  //   email:"",
+  //   PropertyAdd:""
+  // });
+
   // const [crntPage, setCrntPage] = useState(1);
   const [rows, setrows] = useState(masterData);
 
@@ -87,12 +100,14 @@ const MainComponent = (props) => {
     Price: "",
     ARV: "",
     Offer: "",
+    FinancingType: "",
     AgentName: "",
     OffMarket: false,
     Sold4: "",
     OfferContract: "",
     AgentNumber: "",
     Email: "",
+    Name: "",
     Notes: "",
     Modified: null,
     PeopleEmail: "",
@@ -110,6 +125,7 @@ const MainComponent = (props) => {
     Price: "",
     ARV: "",
     Offer: "",
+    FinancingType: "",
     AgentName: "",
     OffMarket: false,
     Sold4: "",
@@ -152,7 +168,7 @@ const MainComponent = (props) => {
       key: "Originally Inputted",
       name: "Originally Inputted",
       fieldName: "Created",
-      minWidth: 100,
+      minWidth: 130,
       maxWidth: 200,
       isResizable: true,
     },
@@ -222,6 +238,25 @@ const MainComponent = (props) => {
       },
     },
     {
+      key: "Buy Price",
+      name: "Buy Price",
+      fieldName: "OfferContract",
+      minWidth: 100,
+      maxWidth: 200,
+      isResizable: true,
+    },
+    {
+      key: "Sold Price ",
+      name: "Sold Price",
+      fieldName: "Sold4",
+      minWidth: 100,
+      maxWidth: 200,
+      isResizable: true,
+      onRender: (item: any) => {
+        return item.Sold4 ? `$${item.Sold4.toLocaleString("en-US")}` : "";
+      },
+    },
+    {
       key: "Agent Name ",
       name: "Agent Name ",
       fieldName: "AgentName",
@@ -238,6 +273,14 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
+      key: "Email",
+      name: "Agent Email",
+      fieldName: "Email",
+      minWidth: 100,
+      maxWidth: 200,
+      isResizable: true,
+    },
+    {
       key: "OffMarket",
       name: "OffMarket ",
       fieldName: "OffMarket",
@@ -246,37 +289,17 @@ const MainComponent = (props) => {
       isResizable: true,
     },
     {
-      key: "Sold 4 ",
-      name: "Sold 4 ",
-      fieldName: "Sold4",
-      minWidth: 100,
-      maxWidth: 200,
-      isResizable: true,
-      onRender: (item: any) => {
-        return item.Sold4 ? `$${item.Sold4.toLocaleString("en-US")}` : "";
-      },
-    },
-    {
-      key: "Received Under Contract form",
-      name: "Received Under Contract form",
-      fieldName: "OfferContract",
-      minWidth: 100,
-      maxWidth: 200,
-      isResizable: true,
-    },
-
-    {
-      key: "Email",
-      name: "Email",
-      fieldName: "Email",
-      minWidth: 100,
-      maxWidth: 200,
-      isResizable: true,
-    },
-    {
       key: "Notes",
       name: "Notes",
       fieldName: "Notes",
+      minWidth: 100,
+      maxWidth: 200,
+      isResizable: true,
+    },
+    {
+      key: "FinancingType",
+      name: "Financing Type",
+      fieldName: "FinancingType",
       minWidth: 100,
       maxWidth: 200,
       isResizable: true,
@@ -312,7 +335,7 @@ const MainComponent = (props) => {
       key: "column18",
       name: "Last Updated",
       fieldName: "Modified",
-      minWidth: 100,
+      minWidth: 130,
       maxWidth: 150,
       isResizable: true,
     },
@@ -368,7 +391,7 @@ const MainComponent = (props) => {
   //sortFunction
 
   const sortFunction = (value) => {
-    const sortedData = duplicate.slice().sort((a: any, b: any) => {
+    const sortedData = arrSecondary.slice().sort((a: any, b: any) => {
       const dateA = new Date(a.Created).getTime();
       const dateB = new Date(b.Created).getTime();
       if (!isNaN(dateA) && !isNaN(dateB)) {
@@ -379,20 +402,10 @@ const MainComponent = (props) => {
         }
       }
     });
-    setmasterdata([...sortedData]);
-    paginate(1, [...sortedData]);
+    setDuplicate([...sortedData]);
+    let tempArr = sortedData;
+    paginate(currentPage, [...tempArr]);
   };
-
-  //search
-  const handleSearch = (val) => {
-    const filteredResults = duplicate.filter((item) =>
-      item.PropertyAddress.toLowerCase().includes(val.toLowerCase())
-    );
-    setmasterdata([...filteredResults]);
-    paginate(1, [...filteredResults]);
-  };
-
-  //selection
 
   const selection = new Selection({
     onSelectionChanged: () => {
@@ -411,6 +424,7 @@ const MainComponent = (props) => {
           Price: selectedItem.Price,
           ARV: selectedItem.ARV,
           Offer: selectedItem.Offer,
+          FinancingType: selectedItem.FinancingType,
           AgentName: selectedItem.AgentName,
           OffMarket: selectedItem.OffMarket,
           Sold4: selectedItem.Sold4,
@@ -444,67 +458,6 @@ const MainComponent = (props) => {
     setrows(paginatedItems);
   }
 
-  // const deselectSelectedItem = () => {
-  //   selection.setAllSelected(false);
-  //   console.log(value);
-  //   setvalue((prevValue) => ({ ...prevValue, selected: false }));
-  // };
-
-  // const getonChange = (key, _value) => {
-  //   let FormData = { ...value };
-  //   FormData[key] = _value;
-  //   // console.log(FormData);
-
-  //   if (key === "Title" && masterData.some((item) => item.Title === _value)) {
-  //     setError("this value already exists");
-  //   } else {
-  //     setError(null);
-  //   }
-  //   setvalue({ ...FormData });
-  // };
-  // const getonChange = (key, _value) => {
-  //   let FormData = { ...value };
-  //   let newErrors = { ...error };
-  //   FormData[key] = _value;
-  //   if (
-  //     key === "Price" ||
-  //     key === "ARV" ||
-  //     key === "Sold4" ||
-  //     key === "Offer"
-  //   ) {
-  //     if (!/^\d*$/.test(_value)) {
-  //       newErrors[key] = "Please enter a Number";
-  //       // return;
-  //     } else {
-  //       newErrors[key] = null;
-  //     }
-  //   }
-  //   // if(key === "Title" && _value == ""){
-  //   //   newErrors[key] = "";
-  //   // }else {
-  //   //   newErrors[key] = null;
-  //   // }
-  //   if (key === "Title" && _value.trim() !== "") {
-  //     const titleExists = masterData.some((item) => {
-  //       // Check if the title exists in other items but not in the current item being edited
-  //       return (
-  //         item.Title.toLowerCase().trim() === _value.toLowerCase().trim() &&
-  //         item.ID !== FormData.ID
-  //       );
-  //     });
-  //     console.log(titleExists);
-
-  //     if (titleExists) {
-  //       newErrors[key] = "This value already exists";
-  //     } else {
-  //       newErrors[key] = null;
-  //     }
-  //   }
-
-  //   setError({ ...newErrors });
-  //   console.log(FormData);
-  //   setvalue({ ...FormData });
-  // };
   const getonChange = (key, _value) => {
     let FormData = { ...value };
     let newErrors = { ...error };
@@ -581,6 +534,7 @@ const MainComponent = (props) => {
         Price: parseInt(value.Price),
         ARV: parseInt(value.ARV),
         Offer: value.Offer,
+        FinancingType: value.FinancingType,
         AgentName: value.AgentName,
         OffMarket: value.OffMarket,
         Sold4: value.Sold4,
@@ -655,27 +609,6 @@ const MainComponent = (props) => {
           setLoader(false);
           console.log(err);
         });
-
-      // let countNew = 0;
-      // for (let i = 0; i < newData.length; i++) {
-      //   sp.web.lists
-      //     .getByTitle(listName)
-      //     .items.getById(Id)
-      //     .attachmentFiles.add(newData[i].name, newData[i].content)
-      //     .then((res) => {
-      //       countNew = countNew + 1;
-      //       if (countNew >= newData.length) {
-      //         getData();
-      //         // SetReRender(true);
-      //         // setIsPane(false);
-      //         // setLoader(false);
-      //       }
-      //     })
-      //     .catch((err) => {
-      //       setLoader(false);
-      //       console.log(err);
-      //     });
-      // }
     } else {
       getData();
       // alert("Updated");
@@ -729,6 +662,7 @@ const MainComponent = (props) => {
           value.Offer !== undefined
             ? parseFloat(value.Offer.replace(/[^0-9.-]+/g, ""))
             : 0,
+        FinancingType: value.FinancingType,
         AgentName: value.AgentName ? value.AgentName : "",
         OffMarket: value.OffMarket ? value.OffMarket : false,
         Sold4:
@@ -816,7 +750,7 @@ const MainComponent = (props) => {
   const getData = async () => {
     await sp.web.lists
       .getByTitle(listName)
-      .items.select("*, AssignedTo/EMail,AttachmentFiles")
+      .items.select("*, AssignedTo/EMail,AssignedTo/Title,AttachmentFiles")
       .expand("AssignedTo", "AttachmentFiles")
       .top(5000)
       .orderBy("Created", false)
@@ -853,7 +787,9 @@ const MainComponent = (props) => {
             Sold4: li.Sold4,
             OfferContract: li.OfferContract,
             AgentNumber: li.AgentNumber,
+            FinancingType: li.FinancingType,
             Email: li.Email,
+            Name: li.AssignedTo?.Title ? li.AssignedTo?.Title : "",
             Notes: li.Notes,
             Modified: li.Modified,
             ID: li.ID,
@@ -862,68 +798,12 @@ const MainComponent = (props) => {
             attachments: arrGetAttach,
           });
         });
-
-        // for (let i: number = 0; res.length > i; i++) {
-        //   await sp.web.lists
-        //     .getByTitle(listName)
-        //     .items.getById(res[i].ID)
-        //     .attachmentFiles()
-        //     .then((resFile) => {
-        //       let arrGetAttach = [];
-        //       resFile.forEach((val) => {
-        //         arrGetAttach.push({
-        //           fileName: val.FileName,
-        //           content: null,
-        //           isNew: false,
-        //           isDelete: false,
-        //           serverRelativeUrl: val.ServerRelativeUrl,
-        //           itemId: value.ID,
-        //         });
-        //       });
-
-        //       DataArray.push({
-        //         Title: res[i].Title ? res[i].Title : "",
-        //         // Created: res[i].Created,
-        //         PropertyAddress: res[i].PropertyAddress
-        //           ? res[i].PropertyAddress
-        //           : "",
-        //         Whereat: res[i].Whereat,
-        //         AssignedTo: res[i].AssignedTo ? res[i].AssignedTo.EMail : "",
-        //         Created: res[i].Created,
-        //         Status: res[i].Status,
-        //         Price: res[i].Price,
-        //         ARV: res[i].ARV,
-        //         Offer: res[i].Offer,
-        //         AgentName: res[i].AgentName,
-        //         OffMarket: res[i].OffMarket,
-        //         Sold4: res[i].Sold4,
-        //         OfferContract: res[i].OfferContract,
-        //         AgentNumber: res[i].AgentNumber,
-        //         Email: res[i].Email,
-        //         Notes: res[i].Notes,
-        //         Modified: res[i].Modified,
-        //         ID: res[i].ID,
-        //         PeopleEmail: res[i].AssignedTo ? res[i].AssignedTo.EMail : "",
-        //         assignId: res[i].AssignedToId ? res[i].AssignedToId : null,
-        //         attachments: arrGetAttach,
-        //       });
-
-        //       // setAttachment([...getattach]);
-        //     })
-        //     .catch((err) => {
-        //       console.log(err);
-        //     });
-        // }
-
+        arrSecondary = [...DataArray];
         setmasterdata([...DataArray]);
         setDuplicate([...DataArray]);
         paginate(1, [...DataArray]);
         setLoader(false);
         isActive = true;
-        // SetReRender(false);
-        // const item: any = sp.web.lists
-        // .getByTitle(listName)
-        // .items.getById(.ID);
       })
       .catch((err) => {
         console.log(err);
@@ -943,36 +823,7 @@ const MainComponent = (props) => {
       });
     });
     setAttachment([...getattach]);
-    // sp.web.lists
-    //   .getByTitle(listName)
-    //   .items.getById(editdata.ID)
-    //   .attachmentFiles()
-    //   .then((res) => {
-    //     let getattach = [];
-    //     res.forEach((val) => {
-    //       getattach.push({
-    //         fileName: val.FileName,
-    //         content: null,
-    //         isNew: false,
-    //         isDelete: false,
-    //         serverRelativeUrl: val.ServerRelativeUrl,
-    //         itemId: value.ID,
-    //       });
-    //     });
-
-    //     setAttachment([...getattach]);
-    //   })
-    //   .catch((err) => {
-    //     console.log(err);
-    //   });
   };
-  // const addachDelete = (id, fileName) => {
-  //   sp.web.lists
-  //     .getByTitle(listName)
-  //     .items.getById(id)
-  //     .attachmentFiles.getByName(fileName)
-  //     .delete();
-  // };
   const calcelAttach = (index) => {
     let temp = [...attachment];
     if (temp[index].isNew) {
@@ -981,6 +832,28 @@ const MainComponent = (props) => {
       temp[index].isDelete = true;
     }
     setAttachment([...temp]);
+  };
+
+  const handleSearch = (val) => {
+    console.log(val);
+    let filteredResults = masterData.filter((item) =>
+      val.property != ""
+        ? item.PropertyAddress.toLowerCase().includes(
+            val.property.trim().toLowerCase()
+          )
+        : item
+    );
+    filteredResults = filteredResults.filter((li) =>
+      val.user.trim() != ""
+        ? li.Name.toLowerCase().includes(val.user.trim().toLowerCase()) ||
+          li.PeopleEmail.toLowerCase().includes(val.user.trim().toLowerCase())
+        : li
+    );
+    console.log(filteredResults);
+    arrSecondary = filteredResults;
+    setDuplicate([...filteredResults]);
+    sortFunction(objFilter.sort);
+    // paginate(1, [...filteredResults]);
   };
   useEffect(() => {
     setLoader(true);
@@ -1038,17 +911,32 @@ const MainComponent = (props) => {
               ]}
               onChange={(e, val) => {
                 setSelectedSortingOption(val.key as string);
-                sortFunction(val.key);
+                objFilter.sort = val.key as string;
+                handleSearch(objFilter);
               }}
             />
           </div>
+          <SearchBox
+            placeholder="Search Assigned To"
+            styles={searchstyle}
+            onChange={(_, newValue) => {
+              objFilter.user = newValue;
+              handleSearch(objFilter);
+            }}
+            onClick={() => {
+              handleSearch(objFilter);
+            }}
+          />
 
           <SearchBox
             placeholder="Search Property Address"
             styles={searchstyle}
             onChange={(_, newValue) => {
-              handleSearch(newValue);
-              setSearchValue(newValue);
+              objFilter.property = newValue;
+              handleSearch(objFilter);
+            }}
+            onClick={() => {
+              handleSearch(objFilter);
             }}
             // onSearch={(val) => {}}
           />
@@ -1069,6 +957,7 @@ const MainComponent = (props) => {
                 Price: "",
                 ARV: "",
                 Offer: "",
+                FinancingType: "",
                 AgentName: "",
                 OffMarket: false,
                 Sold4: "",
@@ -1141,7 +1030,7 @@ const MainComponent = (props) => {
             enableShimmer={true}
             // shimmerLines={10}
           />
-        ) : masterData.length === 0 ? (
+        ) : rows.length === 0 ? (
           <Label
             styles={{
               root: {
@@ -1167,14 +1056,14 @@ const MainComponent = (props) => {
             }}
           />
         )}
-        {masterData.length > 0 || loader ? (
+        {rows.length > 0 || loader ? (
           <Pagination
             currentPage={currentPage}
             totalPages={
-              masterData.length > 0 ? Math.ceil(masterData.length / 30) : 1
+              duplicate.length > 0 ? Math.ceil(duplicate.length / 30) : 1
             }
             onChange={(page) => {
-              paginate(page, masterData);
+              paginate(page, duplicate);
             }}
             // style={{ margin: "auto" }}
           />
@@ -1324,6 +1213,81 @@ const MainComponent = (props) => {
             </div>
             <div style={{ margin: "10px 0px 15px 0px" }}>
               <div style={{ display: "flex", alignItems: "center" }}>
+                <Icon iconName="TextField" style={{ marginRight: "10px" }} />
+                <Label styles={labelstyle}>Property Address</Label>
+              </div>
+
+              <TextField
+                styles={textStyle}
+                placeholder="Please enter address here"
+                value={value.PropertyAddress}
+                id="property"
+                name="property"
+                onChange={(e, val) => {
+                  getonChange("PropertyAddress", val);
+                }}
+              />
+            </div>
+            <div style={{ margin: "10px 0px 15px 0px" }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Icon iconName="KaizalaLogo" style={{ marginRight: "10px" }} />
+                <Label styles={labelstyle}>Source</Label>
+              </div>
+
+              <Dropdown
+                placeholder="Select an option"
+                // label="Technologies"
+                defaultSelectedKey={value.Whereat}
+                options={[
+                  {
+                    key: "MLS O Days",
+                    text: "MLS O Days",
+                  },
+
+                  {
+                    key: "Deep Dive",
+                    text: "Deep Dive",
+                  },
+                  {
+                    key: "OffMarket/Wholesale",
+                    text: "OffMarket/Wholesale",
+                  },
+                  {
+                    key: "Pocket Listing",
+                    text: "Pocket Listing",
+                  },
+                  {
+                    key: "FSBO",
+                    text: "FSBO",
+                  },
+                  {
+                    key: "Pack on Market",
+                    text: "Pack on Market",
+                  },
+                  {
+                    key: "Price Drop",
+                    text: "Price Drop",
+                  },
+                  {
+                    key: "Browardbuyers.com",
+                    text: "Browardbuyers.com",
+                  },
+                  {
+                    key: "Email Blast",
+                    text: "Email Blast",
+                  },
+                  {
+                    key: "Plot Point",
+                    text: "Plot Point",
+                  },
+                ]}
+                onChange={(e, val) => {
+                  getonChange("Whereat", val.key);
+                }}
+              />
+            </div>
+            <div style={{ margin: "10px 0px 15px 0px" }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
                 <Icon iconName="Contact" style={{ marginRight: "10px" }} />
                 <Label styles={labelstyle}>Assigned To</Label>
               </div>
@@ -1357,21 +1321,34 @@ const MainComponent = (props) => {
             </div>
             <div style={{ margin: "10px 0px 15px 0px" }}>
               <div style={{ display: "flex", alignItems: "center" }}>
-                <Icon iconName="TextField" style={{ marginRight: "10px" }} />
-                <Label styles={labelstyle}>Property Address</Label>
+                <Icon iconName="KaizalaLogo" style={{ marginRight: "10px" }} />
+                <Label styles={labelstyle}>Status</Label>
               </div>
-
-              <TextField
-                styles={textStyle}
-                placeholder="Please enter address here"
-                value={value.PropertyAddress}
-                id="property"
-                name="property"
+              <Dropdown
+                // label="Technologies"
+                // defaultSelectedKey={value.Status}
+                defaultSelectedKey={value.Status}
                 onChange={(e, val) => {
-                  getonChange("PropertyAddress", val);
+                  getonChange("Status", val.key);
                 }}
+                options={[
+                  { key: "Coming Soon", text: "Coming Soon" },
+                  { key: "Active", text: "Active" },
+                  {
+                    key: "Active/Under Contract",
+                    text: "Active/Under Contract",
+                  },
+                  { key: "Pending", text: "Pending" },
+                  { key: "Closed", text: "Closed" },
+                  { key: "PC Closed", text: "PC Closed" },
+                  { key: "Temp Off Market", text: "Temp Off Market" },
+                  // Add more options as needed
+                ]}
+                // placeholder="Select an option"
+                // defaultSelectedKey={value.Status}
               />
             </div>
+
             <div style={{ margin: "10px 0px 15px 0px" }}>
               <div style={{ display: "flex", alignItems: "center" }}>
                 <Icon iconName="AddTo" style={{ marginRight: "10px" }} />
@@ -1436,6 +1413,41 @@ const MainComponent = (props) => {
                 }}
               />
             </div>
+            <div style={{ margin: "10px 0px 15px 0px" }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Icon iconName="TextField" style={{ marginRight: "10px" }} />
+                <Label styles={labelstyle}>Buy Price</Label>
+              </div>
+
+              <TextField
+                styles={textStyle}
+                placeholder="Please enter Offer here"
+                value={value.OfferContract}
+                // id="Sold 4"
+                // name="Sold 4"
+                onChange={(e, val) => {
+                  getonChange("OfferContract", val);
+                }}
+              />
+            </div>
+            <div style={{ margin: "10px 0px 15px 0px" }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Icon iconName="TextField" style={{ marginRight: "10px" }} />
+                <Label styles={labelstyle}>Sold Price</Label>
+              </div>
+
+              <TextField
+                styles={textStyle}
+                placeholder="Please enter Offer here"
+                value={value.Sold4}
+                errorMessage={error.Sold4 ? error.Sold4 : null}
+                id="Sold Price"
+                name="Sold Price"
+                onChange={(e, val) => {
+                  getonChange("Sold4", val);
+                }}
+              />
+            </div>
 
             <div style={{ margin: "10px 0px 15px 0px" }}>
               <div style={{ display: "flex", alignItems: "center" }}>
@@ -1472,95 +1484,10 @@ const MainComponent = (props) => {
                 }}
               />
             </div>
-
             <div style={{ margin: "10px 0px 15px 0px" }}>
               <div style={{ display: "flex", alignItems: "center" }}>
                 <Icon iconName="TextField" style={{ marginRight: "10px" }} />
-                <Label styles={labelstyle}>Sold 4</Label>
-              </div>
-
-              <TextField
-                styles={textStyle}
-                placeholder="Please enter Offer here"
-                value={value.Sold4}
-                errorMessage={error.Sold4 ? error.Sold4 : null}
-                id="Sold 4"
-                name="Sold 4"
-                onChange={(e, val) => {
-                  getonChange("Sold4", val);
-                }}
-              />
-            </div>
-
-            <div style={{ margin: "10px 0px 15px 0px" }}>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <Icon iconName="TextField" style={{ marginRight: "10px" }} />
-                <Label styles={labelstyle}>Received Under Contract Form</Label>
-              </div>
-
-              <TextField
-                styles={textStyle}
-                placeholder="Please enter Offer here"
-                value={value.OfferContract}
-                // id="Sold 4"
-                // name="Sold 4"
-                onChange={(e, val) => {
-                  getonChange("OfferContract", val);
-                }}
-              />
-            </div>
-
-            <div style={{ margin: "10px 0px 15px 0px" }}>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <Icon iconName="KaizalaLogo" style={{ marginRight: "10px" }} />
-                <Label styles={labelstyle}>Source</Label>
-              </div>
-
-              <Dropdown
-                placeholder="Select an option"
-                // label="Technologies"
-                defaultSelectedKey={value.Whereat}
-                options={[
-                  {
-                    key: "MSL O Days",
-                    text: "MSL O Days",
-                  },
-
-                  {
-                    key: "Deep Dive",
-                    text: "Deep Dive",
-                  },
-                  {
-                    key: "OffMarket/Wholesale",
-                    text: "OffMarket/Wholesale",
-                  },
-                  {
-                    key: "Pocket Listing",
-                    text: "Pocket Listing",
-                  },
-                  {
-                    key: "FSBO",
-                    text: "FSBO",
-                  },
-                  {
-                    key: "Pack on Market",
-                    text: "Pack on Market",
-                  },
-                  {
-                    key: "Price Drop",
-                    text: "Price drop",
-                  },
-                ]}
-                onChange={(e, val) => {
-                  getonChange("Whereat", val.key);
-                }}
-              />
-            </div>
-
-            <div style={{ margin: "10px 0px 15px 0px" }}>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <Icon iconName="TextField" style={{ marginRight: "10px" }} />
-                <Label styles={labelstyle}>Email</Label>
+                <Label styles={labelstyle}>Agent Email</Label>
               </div>
 
               <TextField
@@ -1574,57 +1501,6 @@ const MainComponent = (props) => {
                 }}
               />
             </div>
-
-            <div style={{ margin: "10px 0px 15px 0px" }}>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <Icon iconName="ListMirrored" style={{ marginRight: "10px" }} />
-                <Label styles={labelstyle}>Notes</Label>
-              </div>
-
-              <TextField
-                styles={textStyle}
-                placeholder="Please enter Offer here"
-                value={value.Notes}
-                // id="Sold 4"
-                // name="Sold 4"
-                onChange={(e, val) => {
-                  getonChange("Notes", val);
-                }}
-                multiline
-                rows={5}
-              />
-            </div>
-
-            <div style={{ margin: "10px 0px 15px 0px" }}>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <Icon iconName="KaizalaLogo" style={{ marginRight: "10px" }} />
-                <Label styles={labelstyle}>Status</Label>
-              </div>
-              <Dropdown
-                // label="Technologies"
-                // defaultSelectedKey={value.Status}
-                defaultSelectedKey={value.Status}
-                onChange={(e, val) => {
-                  getonChange("Status", val.key);
-                }}
-                options={[
-                  { key: "Coming Soon", text: "Coming Soon" },
-                  { key: "Active", text: "Active" },
-                  {
-                    key: "Active/Under Contract",
-                    text: "Active/Under Contract",
-                  },
-                  { key: "Pending", text: "Pending" },
-                  { key: "Closed", text: "Closed" },
-                  { key: "PC Closed", text: "PC Closed" },
-                  { key: "Temp Off Market", text: "Temp Off Market" },
-                  // Add more options as needed
-                ]}
-                // placeholder="Select an option"
-                // defaultSelectedKey={value.Status}
-              />
-            </div>
-
             <div style={{ margin: "10px 0px 15px 0px" }}>
               <div style={{ display: "flex", alignItems: "center" }}>
                 <Icon
@@ -1651,6 +1527,60 @@ const MainComponent = (props) => {
                   }}
                 />
               </div>
+            </div>
+            <div style={{ margin: "10px 0px 15px 0px" }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Icon iconName="ListMirrored" style={{ marginRight: "10px" }} />
+                <Label styles={labelstyle}>Notes</Label>
+              </div>
+
+              <TextField
+                styles={textStyle}
+                placeholder="Please enter Offer here"
+                value={value.Notes}
+                // id="Sold 4"
+                // name="Sold 4"
+                onChange={(e, val) => {
+                  getonChange("Notes", val);
+                }}
+                multiline
+                rows={5}
+              />
+            </div>
+
+            <div style={{ margin: "10px 0px 15px 0px" }}>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Icon iconName="KaizalaLogo" style={{ marginRight: "10px" }} />
+                <Label styles={labelstyle}>Financing Type</Label>
+              </div>
+
+              <Dropdown
+                placeholder="Select an option"
+                // label="Technologies"
+                defaultSelectedKey={value.FinancingType}
+                options={[
+                  {
+                    key: "Cash",
+                    text: "Cash",
+                  },
+
+                  {
+                    key: "Private Money",
+                    text: "Private Money",
+                  },
+                  {
+                    key: "Hard Money",
+                    text: "Hard Money",
+                  },
+                  {
+                    key: "Conventional",
+                    text: "Conventional",
+                  },
+                ]}
+                onChange={(e, val) => {
+                  getonChange("FinancingType", val.key);
+                }}
+              />
             </div>
 
             <div style={{ margin: "10px 0px 15px 0px" }}>
