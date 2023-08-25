@@ -1,6 +1,5 @@
 #workbenchPageContent {
   max-width: 100%;
-  
 }
 
 .content_3f3fd3c2,
@@ -15,4 +14,37 @@
 }
 .ms-Panel-commands {
   display: none !important;
+}
+/* .pagination {
+  display: flex;
+  justify-content: center;
+  margin: 30px 0px;
+} */
+
+[data-automation-id="CanvasZone"] > div {
+  max-width: 100% !important;
+}
+
+div#CommentsWrapper {
+  display: none;
+}
+
+.pagination {
+  text-align: center;
+  cursor: pointer !important;
+  margin: 30px 0px;
+}
+.pagination .ms-Button {
+  border: none !important;
+  background: none !important;
+  min-width: 0 !important;
+  padding: 5px !important;
+  color: #000;
+  margin: 12px 0px;
+}
+.pagination .ms-Button.ms-Button--primary .ms-Button-label {
+  color: #fff;
+  background: #202945;
+  padding: 10px 14px;
+  border-radius: 50%;
 }

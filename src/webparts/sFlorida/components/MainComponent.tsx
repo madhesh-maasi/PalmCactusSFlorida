@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { sp } from "@pnp/sp/presets/all";
-import { Checkbox, Label } from "@fluentui/react";
+import { Checkbox, FontWeights, Label } from "@fluentui/react";
 import { Dropdown } from "@fluentui/react/lib/Dropdown";
 import { Icon } from "@fluentui/react/lib/Icon";
 import { ShimmeredDetailsList } from "@fluentui/react/lib/ShimmeredDetailsList";
@@ -19,6 +19,7 @@ import {
 import classes from "./SFlorida.module.scss";
 import "./style.css";
 import Pagination from "office-ui-fabric-react-pagination";
+import { Spinner, SpinnerSize } from "@fluentui/react/lib/Spinner";
 let DataArray: any[] = [];
 let isActive = false;
 let listName = "S Florida Properties";
@@ -51,7 +52,6 @@ let attachFiles: any[] = [];
 let files: any[] = [];
 let totalPage: number = 30;
 let currentPage = 1;
-let arrMasterdata: any[] = [];
 
 const MainComponent = (props) => {
   const [masterData, setmasterdata] = useState<Data[]>([]);
@@ -195,6 +195,9 @@ const MainComponent = (props) => {
       minWidth: 100,
       maxWidth: 200,
       isResizable: true,
+      onRender: (item: any) => {
+        return item.Price ? `$${item.Price.toLocaleString("en-US")}` : "";
+      },
     },
     {
       key: "ARV",
@@ -203,6 +206,9 @@ const MainComponent = (props) => {
       minWidth: 100,
       maxWidth: 200,
       isResizable: true,
+      onRender: (item: any) => {
+        return item.ARV ? `$${item.ARV.toLocaleString("en-US")}` : "";
+      },
     },
     {
       key: "Offer",
@@ -211,6 +217,9 @@ const MainComponent = (props) => {
       minWidth: 100,
       maxWidth: 200,
       isResizable: true,
+      onRender: (item: any) => {
+        return item.Offer ? `$${item.Offer.toLocaleString("en-US")}` : "";
+      },
     },
     {
       key: "Agent Name ",
@@ -243,6 +252,9 @@ const MainComponent = (props) => {
       minWidth: 100,
       maxWidth: 200,
       isResizable: true,
+      onRender: (item: any) => {
+        return item.Sold4 ? `$${item.Sold4.toLocaleString("en-US")}` : "";
+      },
     },
     {
       key: "Received Under Contract form",
@@ -368,6 +380,7 @@ const MainComponent = (props) => {
       }
     });
     setmasterdata([...sortedData]);
+    paginate(1, [...sortedData]);
   };
 
   //search
@@ -376,6 +389,7 @@ const MainComponent = (props) => {
       item.PropertyAddress.toLowerCase().includes(val.toLowerCase())
     );
     setmasterdata([...filteredResults]);
+    paginate(1, [...filteredResults]);
   };
 
   //selection
@@ -420,8 +434,8 @@ const MainComponent = (props) => {
     },
   });
 
-  function paginate(pagenumber) {
-    let allItems = masterData;
+  function paginate(pagenumber: number, Data) {
+    let allItems = Data;
     var lastIndex = pagenumber * totalPage;
     var firstIndex = lastIndex - totalPage;
     var paginatedItems = allItems.slice(firstIndex, lastIndex);
@@ -533,8 +547,9 @@ const MainComponent = (props) => {
     setvalue({ ...FormData });
   };
 
-  const getFile = (e) => {
+  const getFile = (e: any) => {
     files = e.target.files;
+    // document.getElementById("att").focus();
 
     attachFiles = [...attachment];
     for (let i = 0; i < files.length; i++) {
@@ -552,6 +567,10 @@ const MainComponent = (props) => {
   };
 
   const updatevalue = () => {
+    setIsEdit(false);
+
+    setIsPane(false);
+    setLoader(true);
     sp.web.lists
       .getByTitle(listName)
       .items.getById(Id)
@@ -583,27 +602,32 @@ const MainComponent = (props) => {
         debugger;
 
         if (todelete.length > 0) {
-          await todelete.forEach(async (val, i) => {
-            await sp.web.lists
+          todelete.forEach((val, i) => {
+            sp.web.lists
               .getByTitle(listName)
               .items.getById(Id)
               .attachmentFiles.getByName(val.fileName)
               .delete()
-              .then(async (res) => {
+              .then((res) => {
                 console.log(res);
+                addDataAfterEdit(toadd, Id);
               })
               .catch((error) => {
+                setLoader(false);
                 console.log(error);
                 console.log(`File not deleted : ${val.fileName}`);
               });
           });
+        } else {
+          addDataAfterEdit(toadd, Id);
         }
-        await addDataAfterEdit(toadd, Id);
-        setIsPane(false);
+
+        // setIsPane(false);
         // SetReRender(true);
       })
       .catch((err) => {
         console.log(err);
+        setLoader(false);
         // alert(err);
       });
   };
@@ -616,40 +640,60 @@ const MainComponent = (props) => {
           content: val.content,
         };
       });
-      let countNew = 0;
-      for (let i = 0; i < newData.length; i++) {
-        await sp.web.lists
-          .getByTitle(listName)
-          .items.getById(Id)
-          .attachmentFiles.add(newData[i].name, newData[i].content)
-          .then(async (res) => {
-            countNew = countNew + 1;
-            if (countNew >= newData.length) {
-              await getData(),
-                // SetReRender(true);
-                setIsPane(false);
-            }
-          })
-          .catch((err) => {
-            console.log(err);
-          });
-      }
+
+      sp.web.lists
+
+        .getByTitle(listName)
+
+        .items.getById(Id)
+
+        .attachmentFiles.addMultiple(newData)
+        .then((arr) => {
+          getData();
+        })
+        .catch((err) => {
+          setLoader(false);
+          console.log(err);
+        });
+
+      // let countNew = 0;
+      // for (let i = 0; i < newData.length; i++) {
+      //   sp.web.lists
+      //     .getByTitle(listName)
+      //     .items.getById(Id)
+      //     .attachmentFiles.add(newData[i].name, newData[i].content)
+      //     .then((res) => {
+      //       countNew = countNew + 1;
+      //       if (countNew >= newData.length) {
+      //         getData();
+      //         // SetReRender(true);
+      //         // setIsPane(false);
+      //         // setLoader(false);
+      //       }
+      //     })
+      //     .catch((err) => {
+      //       setLoader(false);
+      //       console.log(err);
+      //     });
+      // }
     } else {
-      await getData();
+      getData();
       // alert("Updated");
     }
     // alert("Updated");
   }
 
   const deleteData = () => {
+    setLoader(true);
+    setIsdelete(false);
     sp.web.lists
       .getByTitle(listName)
       .items.getById(Id)
       .delete()
       .then((res) => {
-        setIsdelete(false);
         // SetReRender(true);
         getData();
+        setLoader(false);
 
         // alert("deleted successfully");
       })
@@ -658,6 +702,10 @@ const MainComponent = (props) => {
       });
   };
   const onSave = async () => {
+    setIsEdit(false);
+    setIsPane(false);
+    setLoader(true);
+
     if (value.Title == "") {
       setError({ ...error, Title: "Title is required" });
       setIsPane(true);
@@ -711,7 +759,7 @@ const MainComponent = (props) => {
 
                 // SetReRender(true);
               }
-              setIsPane(false);
+              // setIsPane(false);
             })
             .catch((err) => {
               console.log(err);
@@ -755,8 +803,9 @@ const MainComponent = (props) => {
         value.Whereat = "";
         value.Status = "";
         setvalue({ ...value });
-        setIsPane(false);
+        // setIsPane(false);
         getData();
+        setLoader(false);
         // SetReRender(true);
       })
       .catch((err) => {
@@ -868,7 +917,7 @@ const MainComponent = (props) => {
 
         setmasterdata([...DataArray]);
         setDuplicate([...DataArray]);
-        paginate(1);
+        paginate(1, [...DataArray]);
         setLoader(false);
         isActive = true;
         // SetReRender(false);
@@ -954,7 +1003,17 @@ const MainComponent = (props) => {
             gap: "10px",
           }}
         >
-          <Label>S Florida Properties</Label>
+          <Label
+            styles={{
+              root: {
+                fontSize: "16px",
+                FontWeights: "700",
+                padding: 0,
+              },
+            }}
+          >
+            S Florida Properties
+          </Label>
           {/* <Icon iconName="FavoriteStar" /> */}
         </div>
         <div
@@ -1084,12 +1143,15 @@ const MainComponent = (props) => {
           />
         ) : masterData.length === 0 ? (
           <Label
-            style={{
-              fontSize: "16px",
-              fontWeight: "bold",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
+            styles={{
+              root: {
+                fontSize: "16px",
+                fontWeight: "bold",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                margin: "50px 0px",
+              },
             }}
           >
             No Data Found
@@ -1105,15 +1167,20 @@ const MainComponent = (props) => {
             }}
           />
         )}
-        <Pagination
-          currentPage={currentPage}
-          totalPages={
-            masterData.length > 0 ? Math.ceil(masterData.length / 30) : 1
-          }
-          onChange={(page) => {
-            paginate(page);
-          }}
-        />
+        {masterData.length > 0 || loader ? (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={
+              masterData.length > 0 ? Math.ceil(masterData.length / 30) : 1
+            }
+            onChange={(page) => {
+              paginate(page, masterData);
+            }}
+            // style={{ margin: "auto" }}
+          />
+        ) : (
+          ""
+        )}
         {/* {masterData.length > 0 ? (
           <DetailsList
             items={masterData}
@@ -1357,7 +1424,8 @@ const MainComponent = (props) => {
               </div>
 
               <TextField
-                styles={textStyle}
+                styles={dollarInputStyle}
+                prefix="$"
                 placeholder="Please enter Offer here"
                 errorMessage={error.Offer ? error.Offer : null}
                 value={value.Offer}
@@ -1617,13 +1685,17 @@ const MainComponent = (props) => {
               >
                 <input
                   type="file"
-                  id="attach"
+                  id="att"
                   style={{ display: "none" }}
-                  onChange={getFile}
+                  // onChange={getFile}
+                  onChange={(e: any) => {
+                    e.preventDefault();
+                    getFile(e);
+                  }}
                   multiple
                 />
                 <Label
-                  htmlFor="attach"
+                  htmlFor="att"
                   styles={{
                     root: {
                       fontSize: "14px",
@@ -1636,7 +1708,7 @@ const MainComponent = (props) => {
                     },
                   }}
                 >
-                  Add Attachments
+                  Click here to add attachments
                 </Label>
               </div>
             </div>
@@ -1646,10 +1718,10 @@ const MainComponent = (props) => {
                 onClick={() => {
                   isEdit ? updatevalue() : onSave();
 
-                  setIsEdit(false);
+                  // setIsEdit(false);
                 }}
                 disabled={
-                  error.Title ||
+                  !value.Title.trim() ||
                   error.ARV ||
                   error.Price ||
                   error.Sold4 ||
@@ -1681,7 +1753,7 @@ const MainComponent = (props) => {
                     Sold4: "",
                   });
                 }}
-                text="cancel"
+                text="Cancel"
                 styles={{
                   root: {
                     borderRadius: "4px",
