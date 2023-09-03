@@ -20,11 +20,14 @@ import classes from "./SFlorida.module.scss";
 import "./style.css";
 import Pagination from "office-ui-fabric-react-pagination";
 import { Spinner, SpinnerSize } from "@fluentui/react/lib/Spinner";
+
 let DataArray: any[] = [];
 let arrSecondary: any[] = [];
 let isActive = false;
+let Hamburger_img: string = require('../assets/filter-filled-tool-symbol.png')
 let listName = "S Florida Properties";
 // let listName = "S Florida Dev";
+// let listName = ""
 interface Data {
   selected?: boolean;
   Title: string;
@@ -58,6 +61,7 @@ let currentPage = 1;
 let objFilter = {
   user: "",
   property: "",
+  mls: "",
   sort: "newerToOlder",
 };
 const MainComponent = (props) => {
@@ -72,6 +76,8 @@ const MainComponent = (props) => {
     Sold4: "",
   });
   const [select, setSelect] = useState(false);
+  const [hamburgerActive, setHamburgerActive] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [attachment, setAttachment] = useState([]);
   const [selectedSortingOption, setSelectedSortingOption] =
     useState("newerToOlder");
@@ -80,7 +86,13 @@ const MainComponent = (props) => {
   const [isEdit, setIsEdit] = useState(false);
   const [Id, setId] = useState(null);
   const [isdelete, setIsdelete] = useState(false);
-  const [filterValue, setFilterValue] = useState(objFilter);
+  // this is for mobile responsive model box
+  const [filterValue, setFilterValue] = useState({
+    user: "",
+    property: "",
+    mls: "",
+    sort: "newerToOlder",
+  });
   // const [search,setSearch] = useState({
   //   name:"",
   //   email:"",
@@ -282,7 +294,7 @@ const MainComponent = (props) => {
     },
     {
       key: "OffMarket",
-      name: "OffMarket ",
+      name: "Off Market ",
       fieldName: "OffMarket",
       minWidth: 100,
       maxWidth: 200,
@@ -391,6 +403,7 @@ const MainComponent = (props) => {
   //sortFunction
 
   const sortFunction = (value) => {
+    console.log("sortFunction", value)
     const sortedData = arrSecondary.slice().sort((a: any, b: any) => {
       const dateA = new Date(a.Created).getTime();
       const dateB = new Date(b.Created).getTime();
@@ -447,6 +460,57 @@ const MainComponent = (props) => {
       // console.log("Selected item:", value);
     },
   });
+
+  const handleSelection = (selectedItem: any) => {
+    // onSelectionChanged: () => {
+    //   const selectedItem: any = selection.getSelection()[0];
+    console.log(selectedItem);
+
+    if (selectedItem) {
+      setId(selectedItem.ID);
+
+      let _selectedItem = {
+        Title: selectedItem.Title,
+        Created: selectedItem.Created,
+        PropertyAddress: selectedItem.PropertyAddress,
+        Whereat: selectedItem.Whereat,
+        AssignedTo: selectedItem.AssignedTo,
+        Status: selectedItem.Status,
+        Price: selectedItem.Price,
+        ARV: selectedItem.ARV,
+        Offer: selectedItem.Offer,
+        FinancingType: selectedItem.FinancingType,
+        AgentName: selectedItem.AgentName,
+        OffMarket: selectedItem.OffMarket,
+        Sold4: selectedItem.Sold4,
+        OfferContract: selectedItem.OfferContract,
+        AgentNumber: selectedItem.AgentNumber,
+        Email: selectedItem.Email,
+        Notes: selectedItem.Notes,
+        Modified: selectedItem.Modified,
+        PeopleEmail: selectedItem.AssignedTo,
+        ID: selectedItem.ID,
+        assignId: selectedItem.AssignedToId,
+      };
+      // setEditdata({ ..._selectedItem });
+      setvalue({ ..._selectedItem });
+      setIsPane(true)
+      setSelect(true);
+      setIsEdit(true);
+      GetAddachment();
+
+      // setvalue((prevValue) => ({ ...prevValue, selected: true }));
+    } else {
+      setSelect(false);
+      // setvalue((prevValue) => ({ ...prevValue, selected: false }));
+    }
+
+
+
+
+    // console.log("Selected item:", value);
+    // },
+  };
 
   function paginate(pagenumber: number, Data) {
     let allItems = Data;
@@ -835,29 +899,47 @@ const MainComponent = (props) => {
   };
 
   const handleSearch = (val) => {
+    console.log(val)
+    paginate(1, duplicate);
     console.log(val);
     let filteredResults = masterData.filter((item) =>
       val.property != ""
         ? item.PropertyAddress.toLowerCase().includes(
-            val.property.trim().toLowerCase()
-          )
+          val.property.trim().toLowerCase()
+        )
         : item
     );
     filteredResults = filteredResults.filter((li) =>
       val.user.trim() != ""
         ? li.Name.toLowerCase().includes(val.user.trim().toLowerCase()) ||
-          li.PeopleEmail.toLowerCase().includes(val.user.trim().toLowerCase())
+        li.PeopleEmail.toLowerCase().includes(val.user.trim().toLowerCase())
         : li
+    );
+    filteredResults = filteredResults.filter((li) =>
+      val.mls.trim() != ""
+        ? li.Title.toLowerCase().includes(val.mls.trim().toLowerCase()) : li
     );
     console.log(filteredResults);
     arrSecondary = filteredResults;
     setDuplicate([...filteredResults]);
-    sortFunction(objFilter.sort);
-    // paginate(1, [...filteredResults]);
+    sortFunction(val.sort);
+
+  };
+
+  // mobile Responsive Change
+  const handleResponsiveChange = () => {
+    setIsMobile(window.innerWidth <= 768);
   };
   useEffect(() => {
     setLoader(true);
     getData();
+
+    // mobile Responsive Change
+    handleResponsiveChange();
+    window.addEventListener('resize', handleResponsiveChange);
+    return () => {
+      window.removeEventListener('resize', handleResponsiveChange);
+    };
   }, []);
 
   return (
@@ -869,13 +951,14 @@ const MainComponent = (props) => {
           alignItems: "center",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-          }}
-        >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+        }}
+      >
+        {!isMobile ? <>
           <Label
             styles={{
               root: {
@@ -888,7 +971,10 @@ const MainComponent = (props) => {
             S Florida Properties
           </Label>
           {/* <Icon iconName="FavoriteStar" /> */}
-        </div>
+        
+        </>:
+        <></>}
+      </div>
         <div
           style={{
             display: "flex",
@@ -896,7 +982,8 @@ const MainComponent = (props) => {
             gap: "10px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div className="header_filter_wraper">
+            {/* <div style={{ display: "flex", alignItems: "center", gap: "10px" }}> */}
             <Label>Orginally inputted :</Label>
             <Dropdown
               styles={{
@@ -915,32 +1002,126 @@ const MainComponent = (props) => {
                 handleSearch(objFilter);
               }}
             />
-          </div>
-          <SearchBox
-            placeholder="Search Assigned To"
-            styles={searchstyle}
-            onChange={(_, newValue) => {
-              objFilter.user = newValue;
-              handleSearch(objFilter);
-            }}
-            onClick={() => {
-              handleSearch(objFilter);
-            }}
-          />
+            {/* </div> */}
+            <SearchBox
+              placeholder="Search Assigned To"
+              styles={searchstyle}
+              onChange={(_, newValue) => {
+                objFilter.user = newValue;
+                handleSearch(objFilter);
+              }}
+            // onClick={() => {
+            //   handleSearch(objFilter);
+            // }}
+            />
 
-          <SearchBox
-            placeholder="Search Property Address"
-            styles={searchstyle}
-            onChange={(_, newValue) => {
-              objFilter.property = newValue;
-              handleSearch(objFilter);
-            }}
-            onClick={() => {
-              handleSearch(objFilter);
-            }}
+            <SearchBox
+              placeholder="Search Property Address"
+              styles={searchstyle}
+              onChange={(_, newValue) => {
+                objFilter.property = newValue;
+                handleSearch(objFilter);
+              }}
+            // onClick={() => {
+            //   handleSearch(objFilter);
+            // }}
             // onSearch={(val) => {}}
+            />
+            <SearchBox
+              // MLS No./Off Market
+              placeholder="Search MLS No"
+              styles={searchstyle}
+              onChange={(_, newValue) => {
+                objFilter.mls = newValue;
+                handleSearch(objFilter);
+              }}
+            // onClick={() => {
+            //   handleSearch(objFilter);
+            // }}
+            />
+          </div>
+          {isMobile ? <>
+          
+            <DefaultButton
+            // disabled={!isActive}
+            iconProps={{ iconName: "Add" }}
+            styles={buttonstyle}
+            className="header_btn"
+            onClick={() => {
+              setIsPane(true);
+              let tempObj: Data = {
+                Title: "",
+                Created: null,
+                PropertyAddress: "",
+                Whereat: "",
+                AssignedTo: null,
+                Status: "",
+                Price: "",
+                ARV: "",
+                Offer: "",
+                FinancingType: "",
+                AgentName: "",
+                OffMarket: false,
+                Sold4: "",
+                OfferContract: "",
+                AgentNumber: "",
+                Email: "",
+                Notes: "",
+                Modified: null,
+                PeopleEmail: "",
+                ID: null,
+                assignId: null,
+              };
+              setvalue(tempObj);
+              setAttachment([]);
+              setIsEdit(false);
+              // setSelect(false);
+              // setvalue({ ...value });
+            }}
           />
-          <DefaultButton
+          {select && (
+            <>
+              <DefaultButton
+                iconProps={{ iconName: "Edit" }}
+                className="header_btn"
+                // styles={buttonstyle}
+
+                styles={{
+                  root: {
+                    border: "none", // Remove the border
+                  },
+                }}
+                onClick={(e: any) => {
+                  setIsEdit(true);
+
+                  setIsPane(true);
+                  setvalue({ ...editdata });
+                  GetAddachment();
+                }}
+              />
+
+              <IconButton
+                // text="Delete"
+                title="Delete"
+                iconProps={{ iconName: "Delete" }}
+                // styles={buttonstyle}
+                styles={{
+                  root: {
+                    color: "#FF6347",
+                  },
+                  rootHovered: {
+                    color: "#FF6347",
+                  },
+                }}
+                onClick={(e: any) => {
+                  // deleteData();
+                  setIsdelete(true);
+                  setIsPane(false);
+                }}
+              />
+            </>
+          )}</>:<>
+            <DefaultButton
             text="New"
             // disabled={!isActive}
             iconProps={{ iconName: "Add" }}
@@ -1019,6 +1200,7 @@ const MainComponent = (props) => {
               />
             </>
           )}
+          </>}
         </div>
       </div>
       <div>
@@ -1028,7 +1210,7 @@ const MainComponent = (props) => {
             items={[]}
             columns={columns}
             enableShimmer={true}
-            // shimmerLines={10}
+          // shimmerLines={10}
           />
         ) : rows.length === 0 ? (
           <Label
@@ -1051,6 +1233,7 @@ const MainComponent = (props) => {
             columns={columns}
             selection={selection}
             selectionMode={SelectionMode.single}
+            onItemInvoked={handleSelection}
             onShouldVirtualize={() => {
               return false;
             }}
@@ -1065,7 +1248,7 @@ const MainComponent = (props) => {
             onChange={(page) => {
               paginate(page, duplicate);
             }}
-            // style={{ margin: "auto" }}
+          // style={{ margin: "auto" }}
           />
         ) : (
           ""
@@ -1344,8 +1527,8 @@ const MainComponent = (props) => {
                   { key: "Temp Off Market", text: "Temp Off Market" },
                   // Add more options as needed
                 ]}
-                // placeholder="Select an option"
-                // defaultSelectedKey={value.Status}
+              // placeholder="Select an option"
+              // defaultSelectedKey={value.Status}
               />
             </div>
 
@@ -1507,7 +1690,7 @@ const MainComponent = (props) => {
                   iconName="TransitionPush"
                   style={{ marginRight: "10px" }}
                 />
-                <Label styles={labelstyle}>Offer Market</Label>
+                <Label styles={labelstyle}>Off Market</Label>
               </div>
 
               <div
@@ -1643,7 +1826,7 @@ const MainComponent = (props) => {
               </div>
             </div>
 
-            <div style={{ marginTop: "25px", display: "flex", gap: "15px" }}>
+            <div style={{ marginTop: "25px", display: "flex" }}>
               <PrimaryButton
                 onClick={() => {
                   isEdit ? updatevalue() : onSave();
@@ -1652,10 +1835,10 @@ const MainComponent = (props) => {
                 }}
                 disabled={
                   !value.Title.trim() ||
-                  error.ARV ||
-                  error.Price ||
-                  error.Sold4 ||
-                  error.Offer
+                    error.ARV ||
+                    error.Price ||
+                    error.Sold4 ||
+                    error.Offer
                     ? true
                     : false
                 }
@@ -1665,6 +1848,7 @@ const MainComponent = (props) => {
                     borderRadius: "4px",
                     backgroundColor: "#7a7574",
                     color: "#fff",
+                    marginRight:"15px",
                   },
                   rootHovered: {
                     backgroundColor: "#7a7574",
@@ -1768,6 +1952,106 @@ const MainComponent = (props) => {
           />
         </div>
       </Modal>
+      {/* {hamburgerActive ?  */}
+      <div className={`filter_container ${hamburgerActive ?"active_filter_container":""}`}>
+        <div className={`filter_wraper`} >
+          <div className='filter_wraper_inner'>
+            {/* <Label>Orginally inputted :</Label> */}
+            {/* <div> */}
+            <Dropdown
+            className="textField_box"
+              styles={{
+                root: {
+                  width: 200,
+                },
+              }}
+              
+              defaultSelectedKey={filterValue.sort}
+              options={[
+                { key: "newerToOlder", text: "Newer to Older" },
+                { key: "olderToNewer", text: "Older to Newer" },
+              ]}
+              onChange={(_,userValue)=>{
+                setFilterValue({...filterValue,sort:userValue.key as string})
+                // setSelectedSortingOption(userValue.key as string);
+              }}
+              // onChange={(e, val) => {
+              //   setSelectedSortingOption(val.key as string);
+              //   objFilter.sort = val.key as string;
+              //   // handleSearch(objFilter);
+              // }}
+            />
+            {/* </div> */}
+            <SearchBox
+              placeholder="Search Assigned To"
+              className="textField_box"
+              styles={searchstyle}
+              value={filterValue.user}
+              onChange={(_,userValue)=>setFilterValue({...filterValue,user:userValue})}
+              
+            />
+
+            <SearchBox
+              placeholder="Search Property Address"
+              className="textField_box"
+              styles={searchstyle}
+              value={filterValue.property}
+              onChange={(_,userValue)=>setFilterValue({...filterValue,property:userValue})}
+              
+            />
+            <SearchBox
+              // MLS No./Off Market
+              placeholder="Search MLS No"
+              className="textField_box"
+              styles={searchstyle}
+              value={filterValue.mls}
+              onChange={(_,userValue)=>setFilterValue({...filterValue,mls:userValue})}
+            
+            />
+            <PrimaryButton
+              text="Apply"
+              className="btn_filter"
+              onClick={()=>{
+                handleSearch(filterValue);
+                setHamburgerActive(!hamburgerActive)
+              }}
+              styles={{
+                root: {
+                  borderRadius: "4px",
+                  backgroundColor: "#7a7574",
+                  color: "#fff",
+                },
+                rootHovered: {
+                  backgroundColor: "#7a7574",
+                  color: "#fff",
+                },
+              }}
+            />
+            <DefaultButton
+              text="Clear"
+              className="btn_filter"
+              onClick={()=>{
+                setHamburgerActive(!hamburgerActive)
+                handleSearch({user: "",property: "",mls: "",sort: "newerToOlder",});
+                setFilterValue({
+                  user: "",
+                  property: "",
+                  mls: "",
+                  sort: "newerToOlder",
+                })
+              }}
+              styles={{
+                root: {
+                  borderRadius: "4px",
+                },
+              }}
+            />
+          </div>
+        </div>
+      </div>
+      {/* :<></>
+      }  */}
+      <div className="filter_icon" onClick={() => setHamburgerActive(!hamburgerActive)}><img src={Hamburger_img} width="20px" height="20px" /></div>
     </div>
   );
 };
